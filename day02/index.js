@@ -1,11 +1,9 @@
 let raw = await Bun.file("day02/input").text();
-let ranges = raw.split(",").map((l) => l.split("-"));
+let ranges = raw.split(",").map((l) => l.split("-").map(Number));
 
 let sumInvalid = (fn) => {
   let sum = 0;
-  for (let range of ranges) {
-    let start = parseInt(range[0]);
-    let end = parseInt(range[1]);
+  for (let [start, end] of ranges) {
     for (let id = start; id <= end; id++) {
       if (fn(id.toString())) {
         sum += id;
