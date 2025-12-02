@@ -5,31 +5,15 @@ let mod = (n, m) => ((n % m) + m) % m;
 
 let [_, part1, part2] = moves.reduce(([psum, zeroes, crossings], move, i) => {
   let before = psum;
-
-  let distance = move[0] * move[1];
-  psum += distance;
-
+  psum += move[0] * move[1];
   if (before < psum) {
-    // moving up
-    for (let p = before + 1; p <= psum; p++) {
-      if (mod(p, 100) === 0) {
-        crossings++;
-      }
-    }
+    crossings += Math.floor(psum / 100) - Math.floor(before / 100);
   } else {
-    // moving down
-    for (let p = before - 1; p >= psum; p--) {
-      if (mod(p, 100) === 0) {
-        crossings++;
-      }
-    }
+    crossings += Math.ceil(before / 100) - Math.ceil(psum / 100);
   }
   
   psum = mod(psum, 100);
-  
-  if (psum === 0) {
-    zeroes++;
-  }
+  if (psum === 0) zeroes++;
 
   return [psum, zeroes, crossings];
 }, [50, 0, 0]);
