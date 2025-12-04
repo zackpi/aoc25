@@ -7,6 +7,13 @@ let deltas = [
   [0, -1],           [0, 1],
   [1, -1],  [1, 0],  [1, 1],
 ];
+let neighbors = (r, c) => {
+  return deltas
+    .map(([dr, dc]) => [r + dr, c + dc])
+    .filter(([nr, nc]) => 
+      nr >= 0 && nr < grid.length && nc >= 0 && nc < grid[nr].length
+    );
+}
 
 let countGrid = grid.map(row => row.map(_ => Infinity));
 let freeList = [];
@@ -15,14 +22,11 @@ for (let r = 0; r < grid.length; r++) {
     if (grid[r][c] === "@") {
 
       let count = 0;
-      for (let [dr, dc] of deltas) {
-        if (r + dr >= 0 && r + dr < grid.length && c + dc >= 0 && c + dc < grid[r].length) {
-          if (grid[r + dr][c + dc] === "@") count++;
-        }
+      for (let [nr, nc] of neighbors(r, c)) {
+        if (grid[nr][nc] === "@") count++;
       }
       countGrid[r][c] = count;
       if (count < 4) freeList.push([r, c]); 
-      
     }
   }
 }
@@ -36,13 +40,11 @@ while (freeList.length > 0) {
       grid[r][c] = ".";
       total++;
 
-      for (let [dr, dc] of deltas) {
-        if (r + dr >= 0 && r + dr < grid.length && c + dc >= 0 && c + dc < grid[r].length) {
-          if (grid[r + dr][c + dc] === "@") {
-            countGrid[r + dr][c + dc]--;
-            if (countGrid[r + dr][c + dc] === 3) {
-              newFreeList.push([r + dr, c + dc]);
-            }
+      for (let [nr, nc] of neighbors(r, c)) {
+        if (grid[nr][nc] === "@") {
+          countGrid[nr][nc]--;
+          if (countGrid[nr][nc] === 3) {
+            newFreeList.push([nr, nc]);
           }
         }
       }
