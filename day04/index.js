@@ -19,12 +19,9 @@ let freeList = [];
 for (let r = 0; r < grid.length; r++) {
   for (let c = 0; c < grid[r].length; c++) {
     if (grid[r][c] === "@") {
-
-      let count = 0;
-      for (let [nr, nc] of neighbors(r, c)) {
-        if (grid[nr][nc] === "@") count++;
-      }
+      let count = neighbors(r, c).filter(([nr, nc]) => grid[nr][nc] === "@").length;
       countGrid[r][c] = count;
+
       if (count < 4) freeList.push([r, c]); 
     }
   }
@@ -52,7 +49,6 @@ while (freeList.length > 0) {
   rounds.push(newFreeList.length);
   freeList = newFreeList;
 }
-
 
 let part1 = rounds[0];
 console.log("part1 =", part1);
