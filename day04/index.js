@@ -1,5 +1,4 @@
 let raw = await Bun.file("day04/input").text();
-// let raw = await Bun.file("day04/input_small").text();
 let grid = raw.split("\n").map(l => l.split(""));
 
 let deltas = [
