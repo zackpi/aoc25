@@ -1,4 +1,3 @@
-// let raw = await Bun.file("day05/input_small").text();
 let raw = await Bun.file("day05/input").text();
 let lines = raw.split("\n");
 let blank = lines.indexOf("");
