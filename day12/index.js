@@ -221,45 +221,32 @@ for (let regionIndex = 0; regionIndex < regions.length; regionIndex++) {
   let { size, counts } = regions[regionIndex];
   // console.log("size =", size, "counts =", counts);
 
-  let maxArea = 0;
+  let minShapeArea = 0;
   for (let i = 0; i < counts.length; i++) {
-    maxArea += 9 * counts[i];
+    minShapeArea += 9 * counts[i];
   }
   
-  // let divX = (3 * Math.trunc(size[0] / 3));
-  // let divY = (3 * Math.trunc(size[1] / 3));
-  // let minArea = divX * divY;
-  let area = size[0] * size[1];
-  let minArea = Math.ceil(area / 9) * 9; // NOTE: I don't think this uses the strictest bound
+  let maxArea = size[0] * size[1];
 
-  if (maxArea < minArea) {
-    console.log("found trivial case:  minArea =", minArea, "maxArea =", maxArea);
+  if (minShapeArea <= maxArea) {
     triviallyPossible += 1;
 
-    await updatePossibleTxt(regionIndex, true);
+    // await updatePossibleTxt(regionIndex, true);
     continue;
   }
 }
-console.log("triviallyPossible =", triviallyPossible);
-console.log("totalRegions =", regions.length);
 
-// too low:
-// 255
-// 451
 // ----------------------------------------
 
 
 const regionsPossible = await readPossibleTxt();
 
 let total = 0;
-for (let regionIndex = 388; regionIndex < regions.length; regionIndex++) {
-  let alreadyKnownPossible = regionsPossible[regionIndex];
-  if (alreadyKnownPossible !== undefined) {
-    if (alreadyKnownPossible === true) {
-      console.log(`region ${regionIndex} already known possible, skipping`);
+for (let regionIndex = 0; regionIndex < regions.length; regionIndex++) {
+  let regionPossible = regionsPossible[regionIndex];
+  if (regionPossible !== undefined) {
+    if (regionPossible === true) {
       total += 1;
-    } else {
-      console.log(`region ${regionIndex} already known impossible, skipping`);
     }
     
     continue;
@@ -289,13 +276,11 @@ for (let regionIndex = 388; regionIndex < regions.length; regionIndex++) {
     }
   }
 }
-console.log("total =", total);
-
 
 // ----------------------------------------
 
 
-let part1 = 0;
+let part1 = total;
 console.log("part1 =", part1);
 // =472
 
