@@ -165,7 +165,11 @@ let placeSingleShapeAt = (grid, shape, posX, posY, chr) => {
   return newGrid;
 }
 
-let bruteCanPlaceRemaining = (grid, remaining, chr=0) => {
+let bruteCanPlaceRemaining = (grid, remaining, timeout, chr=0) => {
+  if (timeout && performance.now() > timeout) {
+    throw new Error("aborted");
+  }
+
   // console.log(" ")
   // console.log("bruteCanPlaceRemaining called with remaining =", remaining);
   // printGrid(grid);
@@ -195,32 +199,60 @@ let bruteCanPlaceRemaining = (grid, remaining, chr=0) => {
   }
 
   validPlacements.sort((a, b) => a.coverage - b.coverage);
-  // console.log("validPlacements (sorted by coverage):", validPlacements);
-
-  // console.log(`found ${validPlacements.length} valid placements for shape index`, i);
-
-  // let placed = 0;
   for (let { i, orientedShape, x, y } of validPlacements) {
-    // console.log(`[${placed} / ${validPlacements.length}] trying placement of shape index ${i} at (${x}, ${y})`);
-    // placed++
 
     let newGrid = placeSingleShapeAt(grid, orientedShape, x, y, chr);
     let newRemaining = remaining.slice();
     newRemaining[i] -= 1;
-    if (bruteCanPlaceRemaining(newGrid, newRemaining, chr + 1)) {
+    if (bruteCanPlaceRemaining(newGrid, newRemaining, timeout, chr + 1)) {
       return true;
     }
   }
 
-  // console.log("no placements possible for current grid and remaining =", remaining);
-
   return false;
 }
+
+// ----------------------------------------
+
+// find trivial cases
+
+let triviallyPossible = 0;
+for (let regionIndex = 0; regionIndex < regions.length; regionIndex++) {
+  let { size, counts } = regions[regionIndex];
+  // console.log("size =", size, "counts =", counts);
+
+  let maxArea = 0;
+  for (let i = 0; i < counts.length; i++) {
+    maxArea += 9 * counts[i];
+  }
+  
+  // let divX = (3 * Math.trunc(size[0] / 3));
+  // let divY = (3 * Math.trunc(size[1] / 3));
+  // let minArea = divX * divY;
+  let area = size[0] * size[1];
+  let minArea = Math.ceil(area / 9) * 9; // NOTE: I don't think this uses the strictest bound
+
+  if (maxArea < minArea) {
+    console.log("found trivial case:  minArea =", minArea, "maxArea =", maxArea);
+    triviallyPossible += 1;
+
+    await updatePossibleTxt(regionIndex, true);
+    continue;
+  }
+}
+console.log("triviallyPossible =", triviallyPossible);
+console.log("totalRegions =", regions.length);
+
+// too low:
+// 255
+// 451
+// ----------------------------------------
+
 
 const regionsPossible = await readPossibleTxt();
 
 let total = 0;
-for (let regionIndex = 0; regionIndex < regions.length; regionIndex++) {
+for (let regionIndex = 388; regionIndex < regions.length; regionIndex++) {
   let alreadyKnownPossible = regionsPossible[regionIndex];
   if (alreadyKnownPossible !== undefined) {
     if (alreadyKnownPossible === true) {
@@ -235,169 +267,37 @@ for (let regionIndex = 0; regionIndex < regions.length; regionIndex++) {
 
   let { size, counts } = regions[regionIndex];
   console.log("checking region size", size, "counts", counts);
-  if (bruteCanPlaceRemaining(initGrid(size[0], size[1]), counts.slice())) {
-    console.log("> can place shapes");
-    total += 1;
-    await updatePossibleTxt(regionIndex, true);
+
+  console.log("  starting timeout for region", regionIndex);
+  let timeout = performance.now() + 1_000;
+
+  try {
+    let placed = bruteCanPlaceRemaining(initGrid(size[0], size[1]), counts.slice(), timeout, 0);
+    if (placed) {
+      console.log("> can place shapes");
+      total += 1;
+    } else {
+      console.log("> cannot place shapes");
+    }
+    await updatePossibleTxt(regionIndex, placed);
+  } catch (e) {
+    if (e.message === "aborted") {
+      console.log("> aborted solving region", regionIndex);
+      await updatePossibleTxt(regionIndex, null); // unknown because aborted
+    } else {
+      throw e;
+    }
   }
 }
 console.log("total =", total);
 
 
-// let shapeGroups = {};
-// for (let i = 0; i < shapes.length; i++) {
-//   let shapeI = shapes[i];
-//   printShape(shapeI.shape);
-//   for (let j = i + 1; j < shapes.length; j++) {
-//     let shapeJ = shapes[j];
-//     printShape(shapeJ.shape, 4);
-
-//     let combinations = [];
-//     for (let dy = -2; dy <= +2; dy++) {
-//       for (let dx = -2; dx <= +2; dx++) {
-//         let overlap = false;
-//         for (let y = 0; y < 3; y++) {
-//           for (let x = 0; x < 3; x++) {
-//             let yI = y;
-//             let xI = x;
-//             let yJ = y + dy;
-//             let xJ = x + dx;
-//             if (yJ < 0 || yJ >= 3 || xJ < 0 || xJ >= 3) {
-//               continue;
-//             }
-//             if (shapeI.shape[yI][xI] === "#" && shapeJ.shape[yJ][xJ] === "#") {
-//               overlap = true;
-//             }
-//           }
-//         }
-//         if (!overlap) {
-//           combinations.push([dx, dy]);
-//         }
-//       }
-//     }
-
-//     console.log(`  combinations between ${shapeI.name} and ${shapeJ.name}:`, combinations);
-//   }
-// }
-
-
-// console.log("shapes =", shapes);
-
-// let totalPossible = 0;
-// for (let { size, counts } of regions) {
-//   // console.log("size =", size, "counts =", counts);
-
-//   let maxArea = 0;
-//   for (let i = 0; i < counts.length; i++) {
-//     maxArea += 9 * counts[i];
-//   }
-  
-//   let divX = (3 * Math.trunc(size[0] / 3));
-//   let divY = (3 * Math.trunc(size[1] / 3));
-//   let minArea = divX * divY;
-
-//   if (maxArea < minArea) {
-//     console.log("found trivial case:  minArea =", minArea, "maxArea =", maxArea);
-//     totalPossible += 1;
-//     continue;
-//   }
-// }
-
-// console.log("totalPossible =", totalPossible);
-// console.log("totalRegions =", regions.length);
-
-
-
-// let totalPossible = 0;
-// for (let { size, counts } of regions) {
-//   // free space records the "trivially" free space not spanned by any 3x3 shape AABB
-//   let freeSpace = Array(size[1]).fill(0).map(() => Array(size[0]).fill(true));
-//   let board = Array(size[1]).fill(0).map(() => Array(size[0]).fill("."));
-
-//   let canPlaceShapeAt = (shape, posX, posY) => {
-//     let consumesSpace = 0;
-//     for (let y = 0; y < 3; y++) {
-//       for (let x = 0; x < 3; x++) {
-//         let boardX = posX + x;
-//         let boardY = posY + y;
-//         if (boardX < 0 || boardX >= size[0] || boardY < 0 || boardY >= size[1]) {
-//           return [false, 0];
-//         }
-
-//         if (shape[y][x] === "#") {
-//           if (board[boardY][boardX] === "#") {
-//             return [false, 0];
-//           }
-//         }
-//         if (freeSpace[boardY][boardX]) {
-//           consumesSpace += 1;
-//         }
-//       }
-//     }
-//     return [true, consumesSpace];
-//   };
-  
-//   let placeShapeAt = (shape, posX, posY) => {
-//     for (let y = 0; y < 3; y++) {
-//       for (let x = 0; x < 3; x++) {
-//         let boardX = posX + x;
-//         let boardY = posY + y;
-
-//         if (shape[y][x] === "#") {
-//           board[boardY][boardX] = "#";
-//         }
-
-//         if (freeSpace[boardY][boardX]) {
-//           freeSpace[boardY][boardX] = false;
-//         }
-//       }
-//     }
-//   };
-
-//   let countsLeft = counts.slice();
-//   while (true) {
-//     let allUsedUp = countsLeft.every(c => c <= 0);
-//     if (allUsedUp) {
-//       console.log("found valid arrangement for region size", size, "counts", counts);
-//       totalPossible += 1;
-//       break;
-//     }
-
-//     let next = Math.trunc(Math.random() * shapes.length);
-//     if (countsLeft[next] <= 0) {
-//       continue;
-//     }
-
-//     let shape = shapes[next].shape;
-//     let minConsumes = Infinity;
-//     let minConsumesPos = null;
-//     for (let y = 0; y < size[1]; y++) {
-//       for (let x = 0; x < size[0]; x++) {
-//         let [canPlace, consumesSpace] = canPlaceShapeAt(shape, x, y);
-//         if (canPlace) {
-//           if (consumesSpace < minConsumes) {
-//             minConsumes = consumesSpace;
-//             minConsumesPos = [x, y];
-//           }
-//         }
-//       }
-//     }
-
-//     if (minConsumesPos) {
-//       placeShapeAt(shape, minConsumesPos[0], minConsumesPos[1]);
-//       countsLeft[next] -= 1;
-//     } else {
-//       console.log("stuck with region size", size, "counts", counts, "countsLeft", countsLeft);
-//       break;
-//     }
-//   }
-
-// }
+// ----------------------------------------
 
 
 let part1 = 0;
 console.log("part1 =", part1);
-// =
+// =472
 
 let part2 = 0;
 console.log("part2 =", part2);
